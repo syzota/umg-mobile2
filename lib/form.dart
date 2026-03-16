@@ -1,23 +1,42 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
+import 'main.dart';
+import 'widgets/glass_container.dart';
+import 'widgets/app_background.dart';
+import 'widgets/app_text_field.dart';
 
 class FormPage extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSave;
   final Map<String, dynamic>? existingAlbum;
+  final VoidCallback onToggleTheme;
+  final ThemeMode themeMode;
 
-  const FormPage({super.key, required this.onSave, this.existingAlbum});
+  const FormPage({
+    super.key,
+    this.existingAlbum,
+    required this.onToggleTheme,
+    required this.themeMode,
+  });
 
   @override
   State<FormPage> createState() => _FormPageState();
 }
 
 class _FormPageState extends State<FormPage> {
-  final TextEditingController namaController = TextEditingController();
-  final TextEditingController labelController = TextEditingController();
-  final TextEditingController hargaController = TextEditingController();
-  final TextEditingController imagePathController = TextEditingController();
+  final namaController = TextEditingController();
+  final labelController = TextEditingController();
+  final hargaController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  XFile? selectedImage;
+  final ImagePicker picker = ImagePicker();
+  String? existingImageUrl;
 
   String? selectedKategori;
+  bool isLoading = false;
+  bool imageError = false;
 
   @override
   void initState() {
@@ -25,9 +44,94 @@ class _FormPageState extends State<FormPage> {
     if (widget.existingAlbum != null) {
       namaController.text = widget.existingAlbum!["nama"] ?? "";
       labelController.text = widget.existingAlbum!["label"] ?? "";
-      hargaController.text = widget.existingAlbum!["harga"] ?? "";
-      imagePathController.text = widget.existingAlbum!["imagePath"] ?? "";
+      hargaController.text = widget.existingAlbum!["harga"].toString();
       selectedKategori = widget.existingAlbum!["kategori"];
+      existingImageUrl = widget.existingAlbum!["image_url"];
+    }
+  }
+
+  Future<void> pickImage() async {
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      imageQuality: 80,
+    );
+    if (image != null) {
+      setState(() {
+        selectedImage = image;
+        imageError = false;
+      });
+    }
+  }
+
+  Future<String?> uploadImage() async {
+    if (selectedImage == null) return existingImageUrl;
+
+    final userId = supabase.auth.currentUser!.id;
+    final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    final bytes = await selectedImage!.readAsBytes();
+
+    await supabase.storage
+        .from('covers')
+        .uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ),
+        );
+
+    return supabase.storage.from('covers').getPublicUrl(fileName);
+  }
+
+  Future<void> saveAlbum() async {
+    setState(() {
+      imageError = selectedImage == null && existingImageUrl == null;
+    });
+
+    if (!_formKey.currentState!.validate()) return;
+    if (imageError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Pilih cover image terlebih dahulu")),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final imageUrl = await uploadImage();
+      final userId = supabase.auth.currentUser!.id;
+
+      final data = {
+        "user_id": userId,
+        "nama": namaController.text.trim(),
+        "label": labelController.text.trim(),
+        "harga": int.parse(hargaController.text.trim()),
+        "kategori": selectedKategori,
+        "image_url": imageUrl,
+      };
+
+      if (widget.existingAlbum != null) {
+        await supabase
+            .from('albums')
+            .update(data)
+            .eq('id', widget.existingAlbum!["id"]);
+      } else {
+        await supabase.from('albums').insert(data);
+      }
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal menyimpan: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -37,173 +141,298 @@ class _FormPageState extends State<FormPage> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(
-                  "https://images.unsplash.com/photo-1501612780327-45045538702b?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
+          AppBackground(
+            isDark: Theme.of(context).brightness == Brightness.dark,
           ),
-
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 15),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 15),
 
-                  // Navbar //
-                  glassContainer(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Text(
-                          "Our Data",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            letterSpacing: 4,
-                            shadows: [
-                              Shadow(
-                                color: Color.fromARGB(76, 0, 0, 0),
-                                blurRadius: 10,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Color.fromARGB(127, 255, 255, 255),
-                          child: Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: glassContainer(
-                        padding: const EdgeInsets.all(25),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.album_rounded,
-                              size: 50,
+                    GlassContainer(
+                      isDark: Theme.of(context).brightness == Brightness.dark,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
                               color: Colors.white,
                             ),
-                            const SizedBox(height: 30),
-
-                            buildLabel("Album Name"),
-                            buildTextField(namaController, Icons.album),
-
-                            const SizedBox(height: 15),
-                            buildLabel("Artist"),
-                            buildTextField(labelController, Icons.person),
-
-                            const SizedBox(height: 15),
-                            buildLabel("Contract Value (USD)"),
-                            buildTextField(
-                              hargaController,
-                              Icons.attach_money,
-                              isNumber: true,
-                            ),
-
-                            const SizedBox(height: 15),
-                            buildLabel("Cover Image URL"),
-                            buildTextField(imagePathController, Icons.link),
-
-                            const SizedBox(height: 15),
-                            buildLabel("Genre"),
-                            buildDropdown(),
-
-                            const SizedBox(height: 30),
-
-                            SizedBox(
-                              width: double.infinity,
-                              height: 55,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(
-                                    194,
-                                    255,
-                                    255,
-                                    255,
-                                  ).withOpacity(0.3),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const Text(
+                            "Our Data",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                              letterSpacing: 4,
+                              shadows: [
+                                Shadow(
+                                  color: Color.fromARGB(76, 0, 0, 0),
+                                  blurRadius: 10,
+                                  offset: Offset(2, 2),
                                 ),
-                                onPressed: () {
-                                  if (namaController.text.isEmpty ||
-                                      labelController.text.isEmpty ||
-                                      selectedKategori == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Complete all fields & choose genre",
+                              ],
+                            ),
+                          ),
+                          GlassContainer(
+                            isDark:
+                                Theme.of(context).brightness == Brightness.dark,
+                            padding: const EdgeInsets.all(4),
+                            child: IconButton(
+                              icon: Icon(
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Icons.light_mode
+                                    : Icons.dark_mode,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              onPressed: widget.onToggleTheme,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: [
+                            GlassContainer(
+                              isDark:
+                                  Theme.of(context).brightness ==
+                                  Brightness.dark,
+                              padding: const EdgeInsets.all(25),
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.album_rounded,
+                                    size: 50,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 30),
+
+                                  buildLabel("Album Name"),
+                                  AppTextField(
+                                    controller: namaController,
+                                    icon: Icons.album,
+                                    hint: "Enter album name",
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return "Album name cannot be empty";
+                                      }
+                                      if (v.trim().length < 2) {
+                                        return "Minimal 2 karakter";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 15),
+                                  buildLabel("Artist"),
+                                  AppTextField(
+                                    controller: labelController,
+                                    icon: Icons.person,
+                                    hint: "Enter artist name",
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return "Artist name cannot be empty";
+                                      }
+                                      if (v.trim().length < 2) {
+                                        return "Minimal 2 karakter";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 15),
+                                  buildLabel("Contract Value (USD)"),
+                                  AppTextField(
+                                    controller: hargaController,
+                                    icon: Icons.attach_money,
+                                    isNumber: true,
+                                    hint: "Contoh: 5000000",
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return "Contract value wajib diisi";
+                                      }
+                                      final parsed = int.tryParse(v.trim());
+                                      if (parsed == null) {
+                                        return "Hanya angka bulat";
+                                      }
+                                      if (parsed <= 0) {
+                                        return "Nilai harus lebih dari 0";
+                                      }
+                                      if (parsed > 999999999) {
+                                        return "Nilai terlalu besar";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 15),
+                                  buildLabel("Cover Image"),
+                                  const SizedBox(height: 10),
+
+                                  Center(
+                                    child: SizedBox(
+                                      width: 180,
+                                      height: 180,
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              child: _buildImagePreview(),
+                                            ),
+                                          ),
+                                          if (selectedImage != null ||
+                                              existingImageUrl != null)
+                                            Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: GestureDetector(
+                                                onTap: () => setState(() {
+                                                  selectedImage = null;
+                                                  existingImageUrl = null;
+                                                }),
+                                                child: Container(
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: Colors.black54,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                  padding: const EdgeInsets.all(
+                                                    6,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.close,
+                                                    color: Colors.white,
+                                                    size: 18,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 10),
+
+                                  GestureDetector(
+                                    onTap: pickImage,
+                                    child: GlassContainer(
+                                      isDark:
+                                          Theme.of(context).brightness ==
+                                          Brightness.dark,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                        horizontal: 16,
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.upload,
+                                            color: Colors.white70,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            "Select Cover Image",
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  if (imageError)
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 6),
+                                      child: Text(
+                                        "Cover image must be selected",
+                                        style: TextStyle(
+                                          color: Color.fromARGB(
+                                            255,
+                                            255,
+                                            142,
+                                            142,
+                                          ),
+                                          fontSize: 12,
                                         ),
                                       ),
-                                    );
-                                    return;
-                                  }
+                                    ),
 
-                                  final dataBaru = {
-                                    "nama": namaController.text,
-                                    "label": labelController.text,
-                                    "harga": hargaController.text,
-                                    "kategori": selectedKategori,
-                                    "imagePath": imagePathController.text,
-                                  };
+                                  const SizedBox(height: 15),
+                                  buildLabel("Genre"),
+                                  buildDropdown(),
 
-                                  widget.onSave(dataBaru);
-                                  Navigator.pop(context);
-                                },
-                                child: const Text(
-                                  "SAVE DATA",
-                                  style: TextStyle(
-                                    color: Color.fromARGB(255, 255, 255, 255),
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        color: Color.fromARGB(76, 0, 0, 0),
-                                        blurRadius: 10,
-                                        offset: Offset(2, 2),
+                                  const SizedBox(height: 30),
+
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 55,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white
+                                            .withValues(alpha: 0.3),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            15,
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                    letterSpacing: 2,
+                                      onPressed: isLoading ? null : saveAlbum,
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text(
+                                              "SAVE DATA",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 2,
+                                              ),
+                                            ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -212,29 +441,24 @@ class _FormPageState extends State<FormPage> {
     );
   }
 
-  // Container //
-
-  Widget glassContainer({required Widget child, EdgeInsetsGeometry? padding}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: child,
-        ),
+  Widget _buildImagePreview() {
+    if (selectedImage != null) {
+      return kIsWeb
+          ? Image.network(selectedImage!.path, fit: BoxFit.cover)
+          : Image.file(File(selectedImage!.path), fit: BoxFit.cover);
+    }
+    if (existingImageUrl != null) {
+      return Image.network(
+        existingImageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.image, size: 40, color: Colors.white54),
+      );
+    }
+    return Container(
+      color: Colors.white12,
+      child: const Center(
+        child: Icon(Icons.image, size: 40, color: Colors.white54),
       ),
     );
   }
@@ -259,56 +483,83 @@ class _FormPageState extends State<FormPage> {
     TextEditingController controller,
     IconData icon, {
     bool isNumber = false,
+    String? hint,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       style: const TextStyle(color: Colors.white),
+      validator: validator,
       decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white54),
         prefixIcon: Icon(icon, color: Colors.white),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: Colors.white.withValues(alpha: 0.3),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(color: Colors.white),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.redAccent),
         ),
       ),
     );
   }
 
   Widget buildDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.bodyLarge!.copyWith(color: Colors.white, fontSize: 16);
+
+    return DropdownButtonFormField<String>(
+      value: selectedKategori,
+      style: textStyle,
+      hint: Text(
+        "Select Genre",
+        style: textStyle.copyWith(color: Colors.white70),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedKategori,
-          hint: const Text(
-            "Select Genre",
-            style: TextStyle(color: Colors.white70),
-          ),
-          dropdownColor: const Color(0xFF1A1A1A),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-          isExpanded: true,
-          style: const TextStyle(color: Colors.white),
-          items: [
-            "Pop",
-            "Rock",
-            "R&B",
-            "Jazz",
-            "Hip Hop",
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (val) => setState(() => selectedKategori = val),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.1),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.redAccent),
         ),
       ),
+      dropdownColor: const Color(0xFF1A1A2E),
+      menuMaxHeight: 300,
+      borderRadius: BorderRadius.circular(20),
+      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+      items: ["Pop", "Rock", "R&B", "Jazz", "Hip Hop"]
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(e, style: textStyle),
+            ),
+          )
+          .toList(),
+      validator: (v) => v == null ? "Genre must be selected" : null,
+      onChanged: (val) => setState(() => selectedKategori = val),
     );
   }
 }

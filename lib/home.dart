@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'form.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'form.dart';
+import 'login.dart';
+import 'main.dart';
+import 'widgets/glass_container.dart';
+import 'widgets/app_background.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback onToggleTheme;
+  final ThemeMode themeMode;
+
+  const HomePage({
+    super.key,
+    required this.onToggleTheme,
+    required this.themeMode,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,11 +24,66 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String selectedCategory = "All Genres";
-  final List<Map<String, dynamic>> items = [];
+  List<Map<String, dynamic>> items = [];
+  bool isLoading = true;
 
-  // Format Mata Uang USD
-  String formatCurrency(String angka) {
-    int value = int.tryParse(angka) ?? 0;
+  @override
+  void initState() {
+    super.initState();
+    fetchAlbums();
+  }
+
+  Future<void> fetchAlbums() async {
+    setState(() => isLoading = true);
+    try {
+      final response = await supabase
+          .from('albums')
+          .select()
+          .order('created_at', ascending: false);
+      if (mounted) {
+        setState(() => items = List<Map<String, dynamic>>.from(response));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> deleteAlbum(String id) async {
+    try {
+      await supabase.from('albums').delete().eq('id', id);
+      await fetchAlbums();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menghapus: $e')));
+      }
+    }
+  }
+
+  Future<void> logout() async {
+    await supabase.auth.signOut();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginPage(
+            onToggleTheme: widget.onToggleTheme,
+            themeMode: widget.themeMode,
+          ),
+        ),
+      );
+    }
+  }
+
+  String formatCurrency(dynamic angka) {
+    int value = int.tryParse(angka.toString()) ?? 0;
     return NumberFormat.currency(
       locale: 'en_US',
       symbol: '\$ ',
@@ -26,7 +93,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    List filteredItems = selectedCategory == "All Genres"
+    List<Map<String, dynamic>> filteredItems = selectedCategory == "All Genres"
         ? items
         : items.where((item) => item["kategori"] == selectedCategory).toList();
 
@@ -34,17 +101,9 @@ class _HomePageState extends State<HomePage> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(
-                  "https://images.unsplash.com/photo-1501612780327-45045538702b?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
+          AppBackground(
+            isDark: Theme.of(context).brightness == Brightness.dark,
           ),
-
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -53,8 +112,8 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   const SizedBox(height: 15),
 
-                  // navbar //
-                  glassContainer(
+                  GlassContainer(
+                    isDark: Theme.of(context).brightness == Brightness.dark,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 15,
                       vertical: 10,
@@ -68,8 +127,8 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            letterSpacing: 4,
+                            fontSize: 18,
+                            letterSpacing: 3,
                             shadows: [
                               Shadow(
                                 color: Color.fromARGB(76, 0, 0, 0),
@@ -79,19 +138,60 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: const Color.fromARGB(
-                            127,
-                            255,
-                            255,
-                            255,
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
+                        Row(
+                          children: [
+                            GlassContainer(
+                              isDark:
+                                  Theme.of(context).brightness ==
+                                  Brightness.dark,
+                              padding: const EdgeInsets.all(4),
+                              child: IconButton(
+                                icon: Icon(
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Icons.light_mode
+                                      : Icons.dark_mode,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: widget.onToggleTheme,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GlassContainer(
+                              isDark:
+                                  Theme.of(context).brightness ==
+                                  Brightness.dark,
+                              padding: const EdgeInsets.all(4),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.logout_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: () => showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text("Logout"),
+                                    content: const Text("Yakin ingin keluar?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text("Batal"),
+                                      ),
+                                      TextButton(
+                                        onPressed: logout,
+                                        child: const Text(
+                                          "Logout",
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -102,40 +202,44 @@ class _HomePageState extends State<HomePage> {
                   Center(
                     child: Column(
                       children: [
-                        const Text(
-                          "Our Artists",
+                        Text(
+                          "Our Albums",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 70,
                             letterSpacing: 4,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Color(0xFF020840),
                             height: 1.0,
                             shadows: [
                               Shadow(
-                                color: Colors.black45,
+                                color: const Color.fromARGB(115, 255, 255, 255),
                                 blurRadius: 10,
                                 offset: Offset(2, 2),
                               ),
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 2),
-
-                        const Text(
+                        SizedBox(height: 2),
+                        Text(
                           "Universal Music Group Management",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Color(0xFF020840),
+                            fontSize: 28,
                             letterSpacing: 1.5,
                             height: 1.0,
                             shadows: [
                               Shadow(
-                                color: Color.fromARGB(103, 0, 0, 0),
-                                blurRadius: 5,
-                                offset: Offset(1, 1),
+                                color: const Color.fromARGB(115, 255, 255, 255),
+                                blurRadius: 10,
+                                offset: Offset(2, 2),
                               ),
                             ],
                           ),
@@ -143,6 +247,7 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 25),
 
                   Center(
@@ -164,11 +269,19 @@ class _HomePageState extends State<HomePage> {
 
                   const SizedBox(height: 20),
 
-                  // card inputan album //
                   Expanded(
-                    child: filteredItems.isEmpty
+                    child: isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                        : filteredItems.isEmpty
                         ? Center(
-                            child: glassContainer(
+                            child: GlassContainer(
+                              isDark:
+                                  Theme.of(context).brightness ==
+                                  Brightness.dark,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 40,
                                 vertical: 20,
@@ -178,7 +291,7 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Icon(
                                     Icons.library_music_outlined,
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: Colors.white.withValues(alpha: 0.5),
                                     size: 50,
                                   ),
                                   const SizedBox(height: 10),
@@ -195,13 +308,16 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 100),
-                            itemCount: filteredItems.length,
-                            itemBuilder: (context, index) {
-                              final item = filteredItems[index];
-                              return artistGlassCard(item, items.indexOf(item));
-                            },
+                        : RefreshIndicator(
+                            onRefresh: fetchAlbums,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 100),
+                              itemCount: filteredItems.length,
+                              itemBuilder: (context, index) {
+                                final item = filteredItems[index];
+                                return artistGlassCard(item);
+                              },
+                            ),
                           ),
                   ),
                 ],
@@ -210,119 +326,155 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white.withOpacity(0.4),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                FormPage(onSave: (b) => setState(() => items.add(b))),
-          ),
-        ),
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
-    );
-  }
-
-  // Reusable Widget //
-  Widget glassContainer({required Widget child, EdgeInsetsGeometry? padding}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+      floatingActionButton: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : const Color.fromARGB(255, 2, 8, 64).withValues(alpha: 0.50),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1,
               ),
-            ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white, size: 30),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FormPage(
+                      onToggleTheme: widget.onToggleTheme,
+                      themeMode: widget.themeMode,
+                    ),
+                  ),
+                );
+                fetchAlbums();
+              },
+            ),
           ),
-          child: child,
         ),
       ),
     );
   }
 
-  Widget artistGlassCard(Map<String, dynamic> item, int realIndex) {
+  Widget artistGlassCard(Map<String, dynamic> item) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
-      child: glassContainer(
+      child: GlassContainer(
+        isDark: Theme.of(context).brightness == Brightness.dark,
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // 1. Input Cover Album //
             Container(
               width: 70,
               height: 70,
               decoration: BoxDecoration(
                 color: Colors.white24,
                 borderRadius: BorderRadius.circular(12),
-                image: item["imagePath"] != null && item["imagePath"] != ""
-                    ? DecorationImage(
-                        image: NetworkImage(item["imagePath"]),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
               ),
-              child: (item["imagePath"] == null || item["imagePath"] == "")
-                  ? const Icon(
+              clipBehavior: Clip.antiAlias,
+              child: item["image_url"] != null && item["image_url"] != ""
+                  ? Image.network(
+                      item["image_url"],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.album_rounded,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    )
+                  : const Icon(
                       Icons.album_rounded,
                       color: Colors.white,
                       size: 30,
-                    )
-                  : null,
+                    ),
             ),
 
             const SizedBox(width: 15),
 
-            // 2. Input info lain //
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nama album //
-                  Text(
-                    item["nama"].toString().toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      letterSpacing: 1,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black45,
-                          blurRadius: 8,
-                          offset: Offset(1, 1),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          item["nama"].toString().toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            letterSpacing: 1,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black45,
+                                blurRadius: 8,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        child: Text(
+                          item["kategori"] ?? "",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 11,
+                            letterSpacing: 1,
+                            shadows: [
+                              Shadow(
+                                color: Colors.cyanAccent,
+                                blurRadius: 8.0,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Artis //
                   Text(
                     item["label"] ?? "Unknown Artist",
                     style: const TextStyle(
                       color: Colors.white70,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Sales //
                   Text(
                     formatCurrency(item["harga"]),
                     style: const TextStyle(
-                      color: Colors.cyanAccent,
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      letterSpacing: 1,
+                      fontSize: 17,
                       shadows: [
-                        Shadow(color: Colors.cyanAccent, blurRadius: 5),
+                        Shadow(
+                          color: Color.fromARGB(122, 24, 255, 255),
+                          blurRadius: 6.0,
+                          offset: Offset(0, 0),
+                        ),
                       ],
                     ),
                   ),
@@ -330,7 +482,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // 3. Tombol update dan delete //
             Column(
               children: [
                 IconButton(
@@ -338,23 +489,48 @@ class _HomePageState extends State<HomePage> {
                     Icons.edit_note_rounded,
                     color: Colors.white70,
                   ),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FormPage(
-                        existingAlbum: item,
-                        onSave: (baru) =>
-                            setState(() => items[realIndex] = baru),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FormPage(
+                          existingAlbum: item,
+                          onToggleTheme: widget.onToggleTheme,
+                          themeMode: widget.themeMode,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                    fetchAlbums();
+                  },
                 ),
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     color: Colors.white60,
                   ),
-                  onPressed: () => setState(() => items.removeAt(realIndex)),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("Hapus Album"),
+                      content: Text("Yakin hapus \"${item["nama"]}\"?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal"),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            deleteAlbum(item["id"]);
+                          },
+                          child: const Text(
+                            "Hapus",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -375,34 +551,28 @@ class _HomePageState extends State<HomePage> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.1),
+                    ? Colors.white.withValues(alpha: 0.5)
+                    : Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : const Color.fromARGB(
+                        255,
+                        2,
+                        8,
+                        64,
+                      ).withValues(alpha: 0.50),
                 borderRadius: BorderRadius.circular(25),
                 border: Border.all(
-                  color: Colors.white.withOpacity(isSelected ? 0.6 : 0.2),
+                  color: Colors.white.withValues(alpha: isSelected ? 0.6 : 0.2),
                 ),
               ),
-              child: Center(
-                child: Text(
-                  text,
-                  style: TextStyle(
-                    color: isSelected ? Colors.black87 : Colors.white,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    shadows: isSelected
-                        ? []
-                        : [
-                            const Shadow(
-                              color: Color.fromARGB(103, 0, 0, 0),
-                              blurRadius: 4,
-                              offset: Offset(1, 1),
-                            ),
-                          ],
-                  ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isSelected ? Colors.black87 : Colors.white,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),
