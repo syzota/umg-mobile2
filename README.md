@@ -74,6 +74,19 @@ Aplikasi dilengkapi sistem autentikasi menggunakan Supabase Auth. Pengguna wajib
 - **Logout** – Keluar dari sesi dengan konfirmasi dialog.
 - **Session Check** – Aplikasi otomatis mengarahkan ke HomePage jika sudah login, atau ke LoginPage jika belum.
 
+```dart
+home: supabase.auth.currentSession != null
+    ? HomePage(...)
+    : LoginPage(...),
+```
+```dart
+await supabase.auth.signInWithPassword(email: email, password: password);
+
+await supabase.auth.signUp(email: email, password: password);
+
+await supabase.auth.signOut();
+```
+
 ### CRUD dengan Supabase
 
 Seluruh operasi data dilakukan langsung ke database Supabase (PostgreSQL), bukan List lokal:
@@ -83,13 +96,43 @@ Seluruh operasi data dilakukan langsung ke database Supabase (PostgreSQL), bukan
 - **Update** – Data album yang sudah ada dapat diedit, termasuk mengganti cover image.
 - **Delete** – Hapus data album dari database dengan konfirmasi dialog.
 
+```dart
+final response = await supabase
+    .from('albums')
+    .select()
+    .order('created_at', ascending: false);
+
+await supabase.from('albums').insert(data);
+
+await supabase.from('albums').update(data).eq('id', id);
+
+await supabase.from('albums').delete().eq('id', id);
+```
+
 ### Cover Image (Supabase Storage)
 
 Cover image dipilih dari galeri perangkat menggunakan `image_picker`, diupload ke Supabase Storage bucket `covers`, dan public URL-nya disimpan di kolom `image_url` pada tabel `albums`. Gambar ditampilkan menggunakan `Image.network` dari URL tersebut.
 
+```dart
+final fileName = '$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+final bytes = await selectedImage!.readAsBytes();
+await supabase.storage.from('covers').uploadBinary(fileName, bytes);
+return supabase.storage.from('covers').getPublicUrl(fileName);
+```
+
 ### Dark Mode & Light Mode
 
 Tema dapat di-toggle kapan saja dari semua halaman menggunakan icon di navbar. State tema dikelola di `MyApp` (`main.dart`) dan diteruskan ke seluruh halaman melalui callback `onToggleTheme`. Setiap halaman menggunakan `Theme.of(context).brightness` untuk mendeteksi tema aktif dan menyesuaikan tampilan background, glass container, dan warna teks.
+
+```dart
+void toggleTheme() {
+  setState(() {
+    _themeMode = _themeMode == ThemeMode.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
+  });
+}
+```
 
 ### Genre Filtering
 
