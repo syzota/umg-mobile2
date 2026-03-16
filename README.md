@@ -272,8 +272,12 @@ File `.env` didaftarkan di `pubspec.yaml` sebagai asset dan ditambahkan ke `.git
 
 Halaman pertama yang ditampilkan jika pengguna belum login. Menggunakan `Supabase.auth.signInWithPassword()` untuk login dan `Supabase.auth.signUp()` untuk registrasi. Dilengkapi validasi format email `@gmail.com` dan toggle visibility password.
 
-<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/c3ae7385-2375-4481-85fb-28704600d4b8" /> <img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/1cfc3e9a-124c-40b8-a6d7-6904e50eb342" />
-
+<table>
+  <tr>
+    <td><img width="400" alt="image" src="https://github.com/user-attachments/assets/c3ae7385-2375-4481-85fb-28704600d4b8" /></td>
+    <td><img width="400" alt="image" src="https://github.com/user-attachments/assets/1cfc3e9a-124c-40b8-a6d7-6904e50eb342" /></td>
+  </tr>
+</table>
 
 ### Home Page ⍟
 
