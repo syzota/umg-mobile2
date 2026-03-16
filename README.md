@@ -9,6 +9,10 @@
 
 Projek ini merupakan aplikasi mobile berbasis Flutter yang dikembangkan sebagai mini project mata kuliah Mobile Programming. Aplikasi ini berfungsi sebagai sistem manajemen data album dengan fitur CRUD (Create, Read, Update, Delete) yang terintegrasi penuh dengan **Supabase** sebagai backend database dan storage, dilengkapi autentikasi pengguna, filtering berdasarkan genre musik, serta dukungan Dark Mode dan Light Mode.
 
+<p align="center">
+  <a href="https://github.com/syzota/umg-mobile">Mini Projek: Part 1 𖦹๋࣭⭑</a>
+</p>
+
 ---
 
 ## **App Hands-On** ⸝⸝.ᐟ⋆.ᐟ
@@ -86,6 +90,8 @@ await supabase.auth.signUp(email: email, password: password);
 
 await supabase.auth.signOut();
 ```
+
+> ⚠️ **Email Verification Required** — Setelah register, Supabase akan mengirimkan email verifikasi ke alamat email yang didaftarkan. Pengguna wajib mengklik link verifikasi tersebut sebelum dapat login. Jika belum diverifikasi, aplikasi akan menampilkan notifikasi error saat mencoba login.
 
 ### CRUD dengan Supabase
 
