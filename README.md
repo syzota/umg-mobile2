@@ -138,15 +138,70 @@ void toggleTheme() {
 
 Filter kategori menggunakan state `selectedCategory` dan `.where()` untuk menyaring data berdasarkan genre. Tersedia 6 kategori: All Genres, Pop, Rock, R&B, Jazz, Hip Hop.
 
-### Form Validation
+### Form Validation Detail ⍟
 
-Setiap field memiliki validasi spesifik:
-- **Album Name & Artist** – Tidak boleh kosong, minimal 2 karakter.
-- **Contract Value** – Hanya angka bulat, nilai harus lebih dari 0 dan tidak melebihi 999.999.999.
-- **Email** – Wajib format `@gmail.com`.
-- **Password** – Minimal 6 karakter.
-- **Cover Image** – Wajib dipilih dari galeri.
-- **Genre** – Wajib dipilih dari dropdown.
+Setiap field memiliki validasi yang spesifik dan berbeda-beda, bukan sekadar cek kosong. Validasi dijalankan saat tombol Save/Login/Register ditekan menggunakan `GlobalKey<FormState>` dan `_formKey.currentState!.validate()`.
+
+**Album Name & Artist Name**
+```dart
+validator: (v) {
+  if (v == null || v.trim().isEmpty) return "Album name cannot be empty";
+  if (v.trim().length < 2) return "Minimal 2 karakter";
+  return null;
+},
+```
+
+**Contract Value** — hanya menerima angka bulat positif dengan batas maksimum
+```dart
+validator: (v) {
+  if (v == null || v.trim().isEmpty) return "Contract value wajib diisi";
+  final parsed = int.tryParse(v.trim());
+  if (parsed == null) return "Hanya angka bulat";
+  if (parsed <= 0) return "Nilai harus lebih dari 0";
+  if (parsed > 999999999) return "Nilai terlalu besar";
+  return null;
+},
+```
+
+**Email** — wajib menggunakan format `@gmail.com`
+```dart
+validator: (v) {
+  if (v == null || v.trim().isEmpty) return "Email tidak boleh kosong";
+  if (!v.trim().endsWith("@gmail.com"))
+    return "Harus menggunakan email @gmail.com";
+  return null;
+},
+```
+
+**Password** — minimal 6 karakter
+```dart
+validator: (v) {
+  if (v == null || v.isEmpty) return "Password tidak boleh kosong";
+  if (v.length < 6) return "Password minimal 6 karakter";
+  return null;
+},
+```
+
+**Konfirmasi Password** — harus cocok dengan password
+```dart
+validator: (v) {
+  if (v != passwordController.text) return "Password tidak cocok";
+  return null;
+},
+```
+
+**Cover Image** — wajib dipilih, dicek secara manual di luar form validator
+```dart
+setState(() {
+  imageError = selectedImage == null && existingImageUrl == null;
+});
+if (imageError) return; // batalkan proses simpan
+```
+
+**Genre** — wajib dipilih dari dropdown
+```dart
+validator: (v) => v == null ? "Genre must be selected" : null,
+```
 
 ---
 
@@ -229,7 +284,7 @@ Nama tab dan icon browser dapat dikonfigurasi melalui `web/index.html` untuk men
 <link rel="icon" type="image/png" href="favicon.png">
 ```
 
-## Widget yang Digunakan ᯓ★
+## Widgets ᯓ★
 
 ### Structural Widgets ⍟
 
