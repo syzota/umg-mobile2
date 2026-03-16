@@ -147,6 +147,8 @@ Filter kategori menggunakan state `selectedCategory` dan `.where()` untuk menyar
 
 ### Form Validation Detail ⍟
 
+<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/3d4c9a81-c883-4fb1-bfbb-372c4495fe97" />
+
 Setiap field memiliki validasi yang spesifik dan berbeda-beda, bukan sekadar cek kosong. Validasi dijalankan saat tombol Save/Login/Register ditekan menggunakan `GlobalKey<FormState>` dan `_formKey.currentState!.validate()`.
 
 **Album Name & Artist Name**
@@ -270,17 +272,20 @@ File `.env` didaftarkan di `pubspec.yaml` sebagai asset dan ditambahkan ke `.git
 
 Halaman pertama yang ditampilkan jika pengguna belum login. Menggunakan `Supabase.auth.signInWithPassword()` untuk login dan `Supabase.auth.signUp()` untuk registrasi. Dilengkapi validasi format email `@gmail.com` dan toggle visibility password.
 
+<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/c3ae7385-2375-4481-85fb-28704600d4b8" /> <img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/1cfc3e9a-124c-40b8-a6d7-6904e50eb342" />
+
+
 ### Home Page ⍟
+
+<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/7b2c0f3b-932c-493c-8280-a70be5813249" />
 
 Halaman utama menampilkan daftar album dalam glass card. Setiap card menampilkan cover image, nama album, chip genre, nama artist, dan nilai kontrak. Data diambil dari Supabase menggunakan `fetchAlbums()` di `initState`. Tersedia `RefreshIndicator` untuk pull-to-refresh.
 
 ### Form Page (Add / Edit Album) ⍟
 
+<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/4e3cd51e-6442-4946-b9fb-fb5718d18fd1" />
+
 FormPage digunakan untuk menambahkan data baru dan mengedit data yang sudah ada. Cover image dipilih dari galeri dan diupload ke Supabase Storage. Saat edit, cover image lama tetap ditampilkan sebagai preview dan bisa diganti.
-
-### Glassmorphism UI ⍟
-
-Seluruh container menggunakan efek glassmorphism dengan `BackdropFilter` dan `ImageFilter.blur()`. Widget `GlassContainer` dibuat reusable dan mendukung Dark/Light mode — dark mode menggunakan warna putih transparan, light mode menggunakan warna biru tua transparan (`Color.fromARGB(255, 2, 8, 64)`).
 
 ### Browser Customize Personalized ⍟
 
