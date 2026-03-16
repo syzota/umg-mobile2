@@ -186,14 +186,6 @@ Nama tab dan icon browser dapat dikonfigurasi melalui `web/index.html` untuk men
 <link rel="icon" type="image/png" href="favicon.png">
 ```
 
----
-
-<p align="center">
-  <i>© 2026 - UMG Mobile by Putri. All rights reserved.</i>
-</p>
-
----
-
 ## Widget yang Digunakan ᯓ★
 
 ### Structural Widgets ⍟
@@ -252,3 +244,11 @@ Nama tab dan icon browser dapat dikonfigurasi melalui `web/index.html` untuk men
 - [x] **AppBackground** (`widgets/app_background.dart`) – Background image + overlay reusable untuk semua halaman.
 - [x] **AppTextField** (`widgets/app_text_field.dart`) – Text field reusable dengan styling konsisten dan validasi fleksibel.
 - [x] **AppPasswordField** (`widgets/app_password_field.dart`) – Password field reusable dengan toggle visibility built-in.
+
+---
+
+<p align="center">
+  <i>© 2026 - UMG Mobile by Putri. All rights reserved.</i>
+</p>
+
+---
