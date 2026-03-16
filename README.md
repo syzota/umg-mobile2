@@ -287,7 +287,7 @@ Halaman pertama yang ditampilkan jika pengguna belum login. Menggunakan `Supabas
 
 ### Home Page ⍟
 
-<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/7b2c0f3b-932c-493c-8280-a70be5813249" />
+<img width="1824" height="2150" alt="image" src="https://github.com/user-attachments/assets/fd40ba9a-de9e-4fba-8adc-8f6eb77c9919" />
 
 Halaman utama menampilkan daftar album dalam glass card. Setiap card menampilkan cover image, nama album, chip genre, nama artist, dan nilai kontrak. Data diambil dari Supabase menggunakan `fetchAlbums()` di `initState`. Tersedia `RefreshIndicator` untuk pull-to-refresh.
 
