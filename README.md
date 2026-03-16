@@ -191,3 +191,64 @@ Nama tab dan icon browser dapat dikonfigurasi melalui `web/index.html` untuk men
 <p align="center">
   <i>© 2026 - UMG Mobile by Putri. All rights reserved.</i>
 </p>
+
+---
+
+## Widget yang Digunakan ᯓ★
+
+### Structural Widgets ⍟
+
+- [x] **Scaffold** – Struktur dasar halaman yang menyediakan body, floatingActionButton, dan extendBodyBehindAppBar.
+- [x] **Stack** – Menumpuk widget background image, overlay, dan konten utama secara berlapis.
+- [x] **SafeArea** – Memastikan konten tidak tertutup notch atau status bar perangkat.
+- [x] **Column** – Menyusun widget secara vertikal pada setiap halaman.
+- [x] **Row** – Menyusun widget secara horizontal, digunakan pada navbar dan card.
+- [x] **Expanded** – Mengisi sisa ruang yang tersedia, digunakan pada list dan form.
+- [x] **Flexible** – Memberi fleksibilitas ukuran pada teks di dalam Row agar tidak overflow.
+
+### Layout & Decoration Widgets ⍟
+
+- [x] **Container** – Widget serbaguna untuk padding, margin, warna, dan dekorasi.
+- [x] **ClipRRect** – Memotong widget dengan sudut melengkung untuk efek glassmorphism.
+- [x] **BackdropFilter** – Menerapkan efek blur pada background untuk tampilan glassmorphism.
+- [x] **DecoratedBox / BoxDecoration** – Menambahkan border, warna, dan border radius pada container.
+- [x] **Padding** – Menambahkan jarak di dalam widget.
+- [x] **SizedBox** – Memberi jarak tetap antar widget atau mengatur ukuran widget.
+- [x] **Center** – Menempatkan widget di tengah parent.
+- [x] **Align** – Menempatkan widget sesuai alignment tertentu (misalnya kanan atas).
+
+### Input Widgets ⍟
+
+- [x] **TextFormField** – Input teks dengan dukungan validasi, digunakan pada semua form field.
+- [x] **DropdownButtonFormField** – Dropdown untuk memilih genre, terintegrasi dengan validasi form.
+- [x] **ElevatedButton** – Tombol utama untuk Login, Register, dan Save Data.
+- [x] **IconButton** – Tombol icon untuk toggle tema, logout, edit, dan delete.
+- [x] **GestureDetector** – Mendeteksi tap pada category chip dan tombol navigasi.
+
+### Display Widgets ⍟
+
+- [x] **Text** – Menampilkan teks dengan berbagai styling (font Jersey 20, letterSpacing, shadows).
+- [x] **Icon** – Menampilkan icon Material Design di navbar, card, dan form.
+- [x] **Image.network** – Menampilkan cover image dari URL Supabase Storage.
+- [x] **Image.file** – Menampilkan preview cover image dari file lokal sebelum diupload.
+- [x] **CircularProgressIndicator** – Indikator loading saat proses fetch data atau simpan data.
+- [x] **CircleAvatar** – Menampilkan avatar bulat di navbar.
+
+### List & Scroll Widgets ⍟
+
+- [x] **ListView.builder** – Menampilkan daftar album secara efisien dengan lazy loading.
+- [x] **SingleChildScrollView** – Membuat konten form bisa di-scroll jika melebihi layar.
+- [x] **RefreshIndicator** – Memungkinkan pull-to-refresh untuk memuat ulang data dari Supabase.
+
+### Dialog & Feedback Widgets ⍟
+
+- [x] **AlertDialog** – Dialog konfirmasi untuk aksi hapus data dan logout.
+- [x] **SnackBar** – Menampilkan pesan singkat untuk error, sukses, atau validasi.
+- [x] **ScaffoldMessenger** – Mengelola tampilan SnackBar secara global.
+
+### Custom / Reusable Widgets ⍟
+
+- [x] **GlassContainer** (`widgets/glass_container.dart`) – Glassmorphism container reusable dengan dukungan Dark/Light mode.
+- [x] **AppBackground** (`widgets/app_background.dart`) – Background image + overlay reusable untuk semua halaman.
+- [x] **AppTextField** (`widgets/app_text_field.dart`) – Text field reusable dengan styling konsisten dan validasi fleksibel.
+- [x] **AppPasswordField** (`widgets/app_password_field.dart`) – Password field reusable dengan toggle visibility built-in.
