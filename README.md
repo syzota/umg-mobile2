@@ -138,6 +138,13 @@ void toggleTheme() {
 
 Filter kategori menggunakan state `selectedCategory` dan `.where()` untuk menyaring data berdasarkan genre. Tersedia 6 kategori: All Genres, Pop, Rock, R&B, Jazz, Hip Hop.
 
+```dart
+  Widget build(BuildContext context) {
+    List<Map<String, dynamic>> filteredItems = selectedCategory == "All Genres"
+        ? items
+        : items.where((item) => item["kategori"] == selectedCategory).toList();
+```
+
 ### Form Validation Detail ⍟
 
 Setiap field memiliki validasi yang spesifik dan berbeda-beda, bukan sekadar cek kosong. Validasi dijalankan saat tombol Save/Login/Register ditekan menggunakan `GlobalKey<FormState>` dan `_formKey.currentState!.validate()`.
